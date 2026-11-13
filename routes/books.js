@@ -2,12 +2,24 @@
 const express = require("express");
 const router = express.Router();
 const connectDB = require("../database");
+const validateBook = require("../middleware/validation");
 
-// GET all books
+// GET all books OR search books by genre
 router.get("/", async (req, res) => {
     try {
         const db = await connectDB();
-        const books = await db.all("SELECT * FROM books");
+        const { genre } = req.query;
+
+        let books;
+
+        if (genre && genre.trim()) {
+            books = await db.all(
+                "SELECT * FROM books WHERE LOWER(genre) = LOWER(?)",
+                [genre.trim()]
+            );
+        } else {
+            books = await db.all("SELECT * FROM books");
+        }
 
         res.status(200).json(books);
     } catch (error) {
@@ -19,6 +31,7 @@ router.get("/", async (req, res) => {
 router.get("/:id", async (req, res) => {
     try {
         const db = await connectDB();
+
         const book = await db.get(
             "SELECT * FROM books WHERE id = ?",
             [req.params.id]
@@ -37,16 +50,9 @@ router.get("/:id", async (req, res) => {
 });
 
 // POST a new book
-router.post("/", async (req, res) => {
+router.post("/", validateBook, async (req, res) => {
     try {
         const { name, genre } = req.body;
-
-        if (!name || !genre) {
-            return res.status(400).json({
-                message: "Name and genre are required"
-            });
-        }
-
         const db = await connectDB();
 
         const result = await db.run(
@@ -66,33 +72,21 @@ router.post("/", async (req, res) => {
 });
 
 // PUT update book
-router.put("/:id", async (req, res) => {
+router.put("/:id", validateBook, async (req, res) => {
     try {
         const { name, genre } = req.body;
-
-        if (!name || !genre) {
-            return res.status(400).json({
-                message: "Name and genre are required"
-            });
-        }
-
         const db = await connectDB();
 
-        const book = await db.get(
-            "SELECT * FROM books WHERE id = ?",
-            [req.params.id]
+        const result = await db.run(
+            "UPDATE books SET name = ?, genre = ? WHERE id = ?",
+            [name, genre, req.params.id]
         );
 
-        if (!book) {
+        if (result.changes === 0) {
             return res.status(404).json({
                 message: "Book not found"
             });
         }
-
-        await db.run(
-            "UPDATE books SET name = ?, genre = ? WHERE id = ?",
-            [name, genre, req.params.id]
-        );
 
         res.status(200).json({
             message: "Book updated successfully"
