@@ -1,7 +1,9 @@
 
 const express = require('express');
 const connectDB = require('./database');
+
 const readersRouter = require('./routes/readers');
+const booksRouter = require('./routes/books');
 
 const app = express();
 
@@ -17,6 +19,9 @@ app.get('/', (req, res) => {
 // Readers routes
 app.use('/readers', readersRouter);
 
+// Books routes
+app.use('/books', booksRouter);
+
 // Start server after database connection
 const PORT = 3000;
 
@@ -24,7 +29,6 @@ async function startServer() {
     try {
         const db = await connectDB();
 
-        // Share database connection with routes
         app.locals.db = db;
 
         app.listen(PORT, () => {
