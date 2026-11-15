@@ -27,6 +27,48 @@ router.get("/", async (req, res) => {
     }
 });
 
+// GET available books by date
+router.get("/available", async (req, res) => {
+    try {
+        const { date } = req.query;
+
+        // Validate requested date
+        if (
+            typeof date !== "string" ||
+            !/^\d{4}-\d{2}-\d{2}$/.test(date) ||
+            !Number.isFinite(Date.parse(date)) ||
+            new Date(date + "T00:00:00Z").toISOString().slice(0, 10) !== date
+        ) {
+            return res.status(400).json({
+                error: "Please provide a valid date in YYYY-MM-DD format"
+            });
+        }
+
+        const db = await connectDB();
+
+        // Find books that have no loan covering the requested date
+        const books = await db.all(
+            `SELECT *
+             FROM books b
+             WHERE NOT EXISTS (
+                 SELECT 1
+                 FROM loans l
+                 WHERE l.book_id = b.id
+                 AND date(l.start_date) <= date(?)
+                 AND date(l.end_date) >= date(?)
+             )`,
+            [date, date]
+        );
+
+        res.status(200).json(books);
+
+    } catch (error) {
+        res.status(500).json({
+            error: error.message
+        });
+    }
+});
+
 // GET book by ID
 router.get("/:id", async (req, res) => {
     try {

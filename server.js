@@ -4,6 +4,7 @@ const connectDB = require('./database');
 
 const readersRouter = require('./routes/readers');
 const booksRouter = require('./routes/books');
+const loansRouter = require('./routes/loans');
 
 const app = express();
 
@@ -21,6 +22,7 @@ app.use('/readers', readersRouter);
 
 // Books routes
 app.use('/books', booksRouter);
+app.use('/loans', loansRouter);
 
 // Start server after database connection
 const PORT = 3000;
